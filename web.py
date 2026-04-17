@@ -4,6 +4,8 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
+import requests
+from bs4 import BeautifulSoup
 
 # 判斷是在 Vercel 還是本地
 if os.path.exists('serviceAccountKey.json'):
@@ -29,8 +31,51 @@ def index():
     link += "<a href=/account>Post傳值</a><hr>"
     link += "<a href=/math>次方與根號計算</a><hr>"
     link += "<a href=/read>讀取Firestore資料</a><hr>"
+    link += "<a href=/search_form>教師搜尋系統 (依姓名關鍵字)</a><hr>"
+    link += "<a href=/spider1>爬取子青老師本學期課程</a><br>"
 
     return link
+@app.route("/search_form")
+def search_form():
+    form_html = "<h2>教師搜尋系統</h2>"
+    form_html += "<form action='/read2' method='GET'>"
+    form_html += "請輸入姓名關鍵字: <input type='text' name='keyword' required> "
+    form_html += "<input type='submit' value='開始搜尋'>"
+    form_html += "</form><hr>"
+    form_html += "<a href='/'>返回首頁</a>"
+    return form_html
+
+@app.route("/spider1")
+def spider1():
+    R = ""
+    url = "https://www1.pu.edu.tw/~tcyang/course.html"
+    Data = requests.get(url, verify=False)
+    Data.encoding = "utf-8"
+    
+    sp = BeautifulSoup(Data.text, "html.parser")
+    result = sp.select(".team-box a")
+
+    for i in result:
+        R += i.text + i.get("href")+"<br>"
+        
+    return R
+
+@app.route("/read2")
+def read2():
+    Result = ""
+    keyword = request.args.get("keyword", "")
+    if not keyword:
+        return "請輸入關鍵字再進行搜尋！"
+    db = firestore.client()
+    collection_ref = db.collection("靜宜資管")    
+    docs = collection_ref.get()    
+    for doc in docs: 
+        teacher = doc.to_dict()
+        if keyword in teacher.get("name", ""):
+            Result += str(teacher) + "<br>"
+    if Result == "":
+        Result = "抱歉,查無此關鍵字姓名之老師資料"
+    return Result
 
 @app.route("/read")
 def read():
