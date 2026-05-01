@@ -34,6 +34,8 @@ def index():
     link += "<a href=/search_form>教師搜尋系統 (依姓名關鍵字)</a><hr>"
     link += "<a href=/spider1>爬取子青老師本學期課程</a><br>"
     link += "<a href=/movie1>爬取即將上映電影</a><br>"
+    link += "<a href=/spidermovie>讀取開眼電影即將上映影片，寫入Firestore</a><br>"
+    link += "<a href=/searchMovie>從資料庫搜尋電影</a><hr>"
 
     return link
 @app.route("/movie1")
@@ -77,7 +79,99 @@ def movie1():
     if found_count == 0:
         R += "<p>抱歉，找不到符合條件的電影。</p>"
 
-    return R    
+    return R 
+
+@app.route("/spidermovie")
+def spidermovie():
+    R = ""
+
+
+
+    db = firestore.client()
+
+    import requests
+    from bs4 import BeautifulSoup
+    url = "http://www.atmovies.com.tw/movie/next/"
+    Data = requests.get(url)
+    Data.encoding = "utf-8"
+    sp = BeautifulSoup(Data.text, "html.parser")
+    lastUpdate = sp.find(class_="smaller09").text.replace("更新時間：","")
+
+
+    result=sp.select(".filmListAllX li")
+    info = ""
+    total = 0
+    for item in result:
+      total += 1
+      movie_id = item.find("a").get("href").replace("/movie/", "").replace("/", "")
+      title = item.find(class_="filmtitle").text
+      picture = "http://www.atmovies.com.tw" + item.find("img").get("src")
+      hyperlink = "http://www.atmovies.com.tw" + item.find("a").get("href")
+
+      showDate = item.find(class_="runtime").text[5:15]
+      info += movie_id + "\n" + title + "\n" + picture + "\n" + hyperlink + "\n" + showDate +"\n\n"
+
+      doc = {
+        "title": title,
+        "picture": picture,
+        "hyperlink": hyperlink,
+        "showDate": showDate,
+        "lastUpdate": lastUpdate
+    }
+
+     
+      doc_ref = db.collection("電影2B").document(movie_id)
+      doc_ref.set(doc)
+
+    #print(info)
+    print(lastUpdate)
+    R += "網站最新更新日期:" + lastUpdate + "<br>"
+    R += "總共爬取"+ str(total) + "部電影到資料庫"
+    return R
+
+
+@app.route("/movie")
+def movie():
+    # 獲取使用者輸入的關鍵字 (預設為空字串)
+    keyword = request.args.get("keyword", "")
+   
+    R = f"<h1>電影查詢結果: {keyword}</h1>"
+    # 建立一個簡單的搜尋表單回傳給前端
+    search_form = """
+        <form action="/movie" method="get">
+            搜尋片名關鍵字: <input type="text" name="keyword">
+            <input type="submit" value="查詢">
+        </form><hr>
+    """
+    R = search_form + R
+
+    url = "https://www.atmovies.com.tw/movie/next/"
+    data = requests.get(url)
+    data.encoding = "utf-8"
+    sp = BeautifulSoup(data.text, "html.parser")
+    result = sp.select(".filmListAllX li")
+
+    found_count = 0
+    for item in result:
+        title = item.find("img").get("alt")
+       
+        # 關鍵字篩選邏輯：如果關鍵字在片名中，或是關鍵字為空(顯示全部)
+        if keyword.lower() in title.lower():
+            found_count += 1
+            img_url = "https://www.atmovies.com.tw" + item.find("img").get("src")
+            intro_url = "https://www.atmovies.com.tw" + item.find("a").get("href")
+           
+            # 組合回傳內容
+            R += f"<div>"
+            R += f"<h3>{title}</h3>"
+            R += f"<a href='{intro_url}' target='_blank'>電影介紹頁</a><br>"
+            R += f"<img src='{img_url}' width='200'><br><br>"
+            R += f"</div><hr>"
+
+    if found_count == 0:
+        R += "<p>抱歉，找不到符合條件的電影。</p>"
+
+    return R       
 
 @app.route("/search_form")
 def search_form():
