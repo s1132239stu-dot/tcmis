@@ -37,12 +37,53 @@ def index():
     link += "<a href=/spidermovie>讀取開眼電影即將上映影片，寫入Firestore</a><br>"
     link += "<a href=/searchMovie>從資料庫搜尋電影</a><hr>"
     link += "<a href=/road>台中十大肇事路口</a><hr>"
-
+    link += "<a href=/weather>讓使用者輸入欲查詢的縣市,會顯示目前天氣及降雨機率</a><hr>"
     return link
+
+@app.route("/weather", methods=["GET", "POST"])
+def weather():
+    R = "<h1>縣市天氣查詢</h1>"
+    
+    # 判斷是否為 POST 請求（使用者按下查詢按鈕）
+    if request.method == "POST":
+        city = request.form.get("city")
+        city = city.replace("台", "臺")
+
+        # 這裡請確保你的 Authorization Key 是有效的
+        url = "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=rdec-key-123-45678-011121314&format=JSON&locationName=" + city
+        
+        try:
+            response = requests.get(url)
+            data = response.json()
+            
+            # 解析氣象資料
+            location_data = data["records"]["location"][0]
+            weather_state = location_data["weatherElement"][0]["time"][0]["parameter"]["parameterName"]
+            rain_chance = location_data["weatherElement"][1]["time"][0]["parameter"]["parameterName"]
+            
+            R += f"<h3>{city} 最新天氣預報</h3>"
+            R += f"<p>目前天氣：{weather_state}</p>"
+            R += f"<p>降雨機率：{rain_chance}%</p>"
+            R += "<br><a href='/weather'>重新查詢</a>"
+            return R
+            
+        except Exception as e:
+            return R + f"<p style='color:red;'>查詢失敗，請檢查縣市名稱或 API 金鑰。錯誤：{e}</p><a href='/weather'>返回</a>"
+
+    # 如果是 GET 請求，顯示輸入表單
+    form_html = """
+        <form method="post">
+            請輸入縣市名稱 (例: 臺中市): 
+            <input type="text" name="city" required>
+            <input type="submit" value="查詢">
+        </form>
+        <br><a href="/">返回首頁</a>
+    """
+    return R + form_html
 
 @app.route("/road")
 def road():
-    R = "<h1>台中市十大肇事路口(113年10月)</h1><br>"
+    R = "<h1>台中市十大肇事路口(113年10月)作者:許紘熏</h1><br>"
     
     # 網址過長，此處略過
     url = "https://datacenter.taichung.gov.tw/swagger/OpenData/a1b899c0-511f-4e3d-b22b-814982a97e41"
