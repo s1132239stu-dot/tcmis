@@ -55,7 +55,7 @@ def webhook3():
         info = "我是許紘熏開發的電影聊天機器人,您選擇的電影分級是：" + rate + "，相關電影：\n"
 
         db = firestore.client()
-        collection_ref = db.collection("電影2B")
+        collection_ref = db.collection("本週新片含分級")
         docs = collection_ref.get()
         result = ""
         for doc in docs:
