@@ -40,8 +40,8 @@ def index():
     link += "<a href=/weather>讓使用者輸入欲查詢的縣市,會顯示目前天氣及降雨機率</a><hr>"
     return link
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
+@app.route("/webhook3", methods=["POST"])
+def webhook3():
     # build a request object
     req = request.get_json(force=True)
     # fetch queryResult from json
@@ -51,7 +51,19 @@ def webhook():
 
     if (action == "rateChoice"):
         rate =  req["queryResult"]["parameters"]["rate"]
-        info = "我是許紘熏設計的機器人,您選擇的電影分級是：" + rate
+        info = "我是許紘熏開發的電影聊天機器人,您選擇的電影分級是：" + rate + "，相關電影：\n"
+
+                db = firestore.client()
+        collection_ref = db.collection("電影2B")
+        docs = collection_ref.get()
+        result = ""
+        for doc in docs:
+            dict = doc.to_dict()
+            if rate in dict["rate"]:
+                result += "片名：" + dict["title"] + "\n"
+                result += "介紹：" + dict["hyperlink"] + "\n\n"
+        info += result
+
 
     return make_response(jsonify({"fulfillmentText": info}))
 
