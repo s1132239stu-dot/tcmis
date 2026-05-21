@@ -39,7 +39,12 @@ def index():
     link += "<a href=/road>台中十大肇事路口</a><hr>"
     link += "<a href=/weather>讓使用者輸入欲查詢的縣市,會顯示目前天氣及降雨機率</a><hr>"
     link += "<a href=/rate>本周新片進DB</a><hr>"
+    link += "<a href=/webdemo>聊天機器人</a><hr>"
     return link
+
+@app.route("/webdemo")
+def webdemo():
+    return render_template("webdemo.html")
 
 @app.route("/webhook3", methods=["POST"])
 def webhook3():
